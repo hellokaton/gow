@@ -5,7 +5,6 @@ import (
 	"regexp"
 	"path"
 	"strings"
-	"github.com/biezhi/agon/log"
 	"net/http"
 	"fmt"
 	"time"
@@ -119,7 +118,7 @@ func (r *Router) ApplyStatic() {
 		for _, s := range statics {
 			if strings.HasPrefix(url, s) {
 				http.ServeFile(ctx.Response(), ctx.Request(), url)
-				ctx.Response().Finish()
+				ctx.Response().Interrupt()
 			}
 		}
 		
@@ -144,7 +143,7 @@ func (r *Router) Add(method RequestMethod, pattern string, fn ...Handler) *Route
 		pattern: regex,
 		handler: fn,
 	})
-	log.Info("Add Route %s\t%s", string(method), pattern)
+	logger.Info("Add Route %s\t%s", string(method), pattern)
 	return r
 }
 
@@ -199,22 +198,22 @@ func (r *Router) handler(w http.ResponseWriter, req *http.Request) {
 		if _, ok := r.inter[AFTER_EXEC]; ok {
 			r.inter[AFTER_EXEC](context)
 		}
-		if !context.Response().IsFinish {
-			context.Response().Finish()
+		if !context.Response().IsInterrupt {
+			context.Response().Interrupt()
 		}
 		context = nil
 	}()
 	
 	if _, ok := r.inter[STATIC_RES]; ok {
 		r.inter[STATIC_RES](context)
-		if context.Response().IsFinish {
+		if context.Response().IsInterrupt {
 			return
 		}
 	}
 	
 	if _, ok := r.inter[BEFORE_EXEC]; ok {
 		r.inter[BEFORE_EXEC](context)
-		if context.Response().IsFinish {
+		if context.Response().IsInterrupt {
 			return
 		}
 	}
@@ -222,7 +221,7 @@ func (r *Router) handler(w http.ResponseWriter, req *http.Request) {
 	if len(r.middle) > 0 {
 		for _, h := range r.middle {
 			h(context)
-			if context.Response().IsFinish {
+			if context.Response().IsInterrupt {
 				break
 			}
 		}
@@ -243,28 +242,29 @@ func (r *Router) handler(w http.ResponseWriter, req *http.Request) {
 		//context.routeParams = params
 		for _, f := range fn {
 			f(context)
-			if context.Response().IsFinish {
+			if context.Response().IsInterrupt {
 				break
 			}
 		}
 		if !context.Response().IsCommit {
 			context.Response().Commit()
 		}
-		log.Info("%s\t%s\t%s", string(req.Method), req.URL.Path, time.Since(start))
+		logger.Info("%s\t%s\t%s", string(req.Method), req.URL.Path, time.Since(start))
+		
+		if _, ok := r.inter[AFTER_EXEC]; ok {
+			r.inter[AFTER_EXEC](context)
+		}
 	} else {
 		context.Response().Status = 404
 		if _, ok := r.inter[NOT_FOUND]; ok {
 			r.inter[NOT_FOUND](context)
-			if !context.Response().IsFinish {
-				context.Response().Finish()
+			if !context.Response().IsInterrupt {
+				context.Response().Interrupt()
 			}
 		} else {
-			log.Warn("Not Found %s", req.URL.Path)
+			logger.Warn("Not Found %s", req.URL.Path)
 			context.Response().Throw(404)
 		}
-	}
-	if _, ok := r.inter[AFTER_EXEC]; ok {
-		r.inter[AFTER_EXEC](context)
 	}
 	context = nil
 }

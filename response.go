@@ -14,7 +14,7 @@ type Response struct {
 	http.ResponseWriter
 	ctx        *context
 	Status     int
-	IsFinish   bool
+	IsInterrupt   bool
 	IsCommit   bool
 	Body       []byte
 	Headers    map[string]string
@@ -26,7 +26,7 @@ func NewResponse(w http.ResponseWriter) *Response {
 	res.ResponseWriter = w
 	res.Status = http.StatusOK
 	res.IsCommit = false
-	res.IsFinish = false
+	res.IsInterrupt = false
 	res.Headers = make(map[string]string)
 	res.Headers["Content-Type"] = "text/html;charset=UTF-8"
 	return res
@@ -79,14 +79,14 @@ func (res *Response) Cookie(key string, value ...string) string {
 	return ""
 }
 
-func (res *Response) Finish() {
-	res.IsFinish = true
-	if res.IsFinish {
+func (res *Response) Interrupt() {
+	if res.IsInterrupt {
 		return
 	}
 	if !res.IsCommit{
 		res.Commit()
 	}
+	res.IsInterrupt = true
 }
 
 func (res *Response) Commit() {

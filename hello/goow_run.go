@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/biezhi/gow"
-	"github.com/biezhi/agon/log"
+	"fmt"
 )
 
 func IndexPage(ctx *gow.Context) string {
@@ -16,15 +16,15 @@ func Hello(ctx gow.Context) {
 func main() {
 	g := gow.Me()
 	g.Get("/", func(ctx gow.Context) {
-		log.Warn("Hello World")
 		ctx.Text("Hello World \n")
 	}).Before(func(ctx gow.Context) {
-		log.Debug("global before")
+		fmt.Println("global before")
 	}).After(func(ctx gow.Context) {
-		log.Debug("global after")
+		fmt.Println("global after")
 	}).NotFound(func(ctx gow.Context) {
+		fmt.Println("404...")
 		ctx.Status(404)
 		ctx.Text("not found this url")
 	})
-	g.Listen(":10777")
+	g.Listen()
 }

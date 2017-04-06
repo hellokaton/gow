@@ -3,9 +3,11 @@ package gow
 import (
 	"net/http"
 	"github.com/biezhi/agon/log"
+	"github.com/biezhi/agon/conf/ini"
 	"sync"
 	"crypto/tls"
 	"net"
+	"fmt"
 )
 
 type Gow struct {
@@ -17,16 +19,49 @@ type Gow struct {
 	TLSServer    *http.Server
 	Listener     net.Listener
 	TLSListener  net.Listener
-	pool         sync.Pool
+	Pool         sync.Pool
+	Host         string
+	Port         int
 }
+
+var logger = log.NewLog()
 
 func Me() *Gow {
 	gow := Gow{}
+	logger.Prefix("[gow] -- ")
 	gow.inter = make(map[string]Handler)
+	gow.Host = "0.0.0.0"
+	gow.Port = 10077
 	statics = append(statics, "public")
 	statics = append(statics, "static")
+	gow.Config()
 	gow.ApplyStatic()
 	return &gow
+}
+
+func (g *Gow) Config() *Gow {
+	file, err := ini.LoadFile("app.ini")
+	if err != nil {
+		logger.Error("load [app.ini] error %s", err.Error())
+	} else {
+		host, ok := file.Get("app", "host")
+		if ok {
+			g.Host = host
+		}
+		port, ok := file.GetInt("app", "port")
+		if ok {
+			g.Port = port
+		}
+		prefix, ok := file.Get("logger", "prefix")
+		if ok {
+			logger.Prefix(prefix)
+		}
+		dev, ok := file.GetBool("app", "dev")
+		if ok {
+			g.Dev = dev
+		}
+	}
+	return g
 }
 
 func (g *Gow) enableSSL(address string) error {
@@ -50,7 +85,7 @@ func (e *Gow) StartServer(s *http.Server) (err error) {
 				return err
 			}
 		}
-		log.Info("⇛ http server started on %s\n", e.Listener.Addr())
+		logger.Info("⇛ http server started on %s\n", e.Listener.Addr())
 		return s.Serve(e.Listener)
 	}
 	if e.TLSListener == nil {
@@ -60,13 +95,19 @@ func (e *Gow) StartServer(s *http.Server) (err error) {
 		}
 		e.TLSListener = tls.NewListener(l, s.TLSConfig)
 	}
-	log.Info("⇛ http server started on %s\n", e.TLSListener.Addr())
+	logger.Info("⇛ http server started on %s\n", e.TLSListener.Addr())
 	return s.Serve(e.TLSListener)
 }
 
-func (g *Gow) Listen(addr string) {
-	log.Info("Server Listen %s", addr)
-	log.Error("Server Start Error", http.ListenAndServe(addr, g))
+func (g *Gow) Listen(addr ... string) {
+	if len(addr) > 0 {
+		logger.Info("Server Listen %s", addr)
+		logger.Error("Server Start Error", http.ListenAndServe(addr[0], g))
+	} else{
+		logger.Info("Server Listen %s:%d", g.Host, g.Port)
+		address := g.Host + ":" + fmt.Sprint(g.Port)
+		logger.Error("Server Start Error", http.ListenAndServe(address, g))
+	}
 }
 
 func (g *Gow) View() *View {
