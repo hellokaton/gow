@@ -8,21 +8,15 @@ import (
 	"html/template"
 )
 
-// View instance provides simple template render.
 type View struct {
-	// template directory
 	Dir string
-	// view functions map
 	FuncMap template.FuncMap
-	// Cache Flag
 	IsCache bool
-	// template cache map
 	templateCache map[string]*template.Template
 }
 
 func (v *View) getTemplateInstance(tpl []string) (*template.Template, error) {
 	key := strings.Join(tpl, "-")
-	// if IsCache, get cached template if exist
 	if v.IsCache {
 		if v.templateCache[key] != nil {
 			return v.templateCache[key], nil
@@ -64,21 +58,17 @@ func (v *View) Render(tpl string, data map[string]interface{}) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Has checks the template file existing.
 func (v *View) Has(tpl string) bool {
 	f := path.Join(v.Dir, tpl)
 	_, e := os.Stat(f)
 	return e == nil
 }
 
-// NoCache sets view cache off and clean cached data.
 func (v *View) NoCache(){
 	v.IsCache = false
 	v.templateCache = make(map[string]*template.Template)
 }
 
-// NewView returns view instance with directory.
-// It contains bundle template function HTML(convert string to template.HTML).
 func NewView(dir string) *View {
 	v := new(View)
 	v.Dir = dir
