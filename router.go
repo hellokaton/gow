@@ -121,7 +121,6 @@ func (r *Router) ApplyStatic() {
 				ctx.Response().Interrupt()
 			}
 		}
-		
 	}
 }
 

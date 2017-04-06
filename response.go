@@ -12,13 +12,13 @@ import (
 
 type Response struct {
 	http.ResponseWriter
-	ctx        *context
-	Status     int
-	IsInterrupt   bool
-	IsCommit   bool
-	Body       []byte
-	Headers    map[string]string
-	gow        *Gow
+	ctx         *context
+	Status      int
+	IsInterrupt bool
+	IsCommit    bool
+	Body        []byte
+	Headers     map[string]string
+	gow         *Gow
 }
 
 func NewResponse(w http.ResponseWriter) *Response {
@@ -83,7 +83,7 @@ func (res *Response) Interrupt() {
 	if res.IsInterrupt {
 		return
 	}
-	if !res.IsCommit{
+	if !res.IsCommit {
 		res.Commit()
 	}
 	res.IsInterrupt = true
@@ -96,7 +96,9 @@ func (res *Response) Commit() {
 	for name, value := range res.Headers {
 		res.Header().Set(name, value)
 	}
-	res.WriteHeader(res.Status)
+	if res.IsInterrupt {
+		res.WriteHeader(res.Status)
+	}
 	res.Write(res.Body)
 	res.IsCommit = true
 }
