@@ -189,17 +189,20 @@ func (r *Router) handler(w http.ResponseWriter, req *http.Request) {
 			context = nil
 			return
 		}
-		context.SetBody([]byte(fmt.Sprint(e)))
 		context.Status(http.StatusServiceUnavailable)
-		println(string(context.Response().Body))
+		context.SetBody([]byte(fmt.Sprint(e)))
+		
+		logger.Error(fmt.Sprint(e))
 		debug.PrintStack()
 		
 		if _, ok := r.inter[AFTER_EXEC]; ok {
 			r.inter[AFTER_EXEC](context)
 		}
 		if !context.Response().IsInterrupt {
-			context.Response().Interrupt()
+			context.Response().IsInterrupt = true
+			context.Response().Commit()
 		}
+		
 		context = nil
 	}()
 	

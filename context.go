@@ -1,7 +1,6 @@
 package gow
 
 import (
-	"bytes"
 	"net/http"
 	"strconv"
 	"net/url"
@@ -33,26 +32,22 @@ type (
 		Strings(key string) []string
 		Flash(key string, v ...interface{}) interface{}
 		
-		Layout(str string)
-		Func(name string, fn interface{})
-		
 		SetBody(body []byte)
 		Status(code int)
 		ContentType(contentType string)
-		Render(tpl string, data map[string]interface{})
+		Render(tpl string, model map[string]interface{})
 		Tpl(tpl string, data map[string]interface{}) string
 	}
 	
 	context struct {
-		request  *http.Request
-		response *Response
-		path     string
-		pnames   []string
-		pvalues  []string
-		query    url.Values
-		gow      *Gow
-		layout   string
-		flashData  map[string]interface{}
+		request   *http.Request
+		response  *Response
+		path      string
+		pnames    []string
+		pvalues   []string
+		query     url.Values
+		gow       *Gow
+		flashData map[string]interface{}
 	}
 )
 
@@ -138,38 +133,20 @@ func (ctx *context) ContentType(contentType string) {
 	ctx.response.ContentType(contentType)
 }
 
-// Layout sets layout string.
-func (ctx *context) Layout(str string) {
-	ctx.layout = str
-}
-
 func (ctx *context) Tpl(tpl string, data map[string]interface{}) string {
-	b, e := ctx.gow.view.Render(tpl+".html", data)
+	b, e := ctx.gow.TplEngine.Render(tpl+".html", data)
 	if e != nil {
 		panic(e)
 	}
 	return string(b)
 }
 
-func (ctx *context) Render(tpl string, data map[string]interface{}) {
-	b, e := ctx.gow.view.Render(tpl+".html", data)
+func (ctx *context) Render(tpl string, model map[string]interface{}) {
+	b, e := ctx.gow.TplEngine.Render(tpl+".html", model)
 	if e != nil {
 		panic(e)
 	}
-	if ctx.layout != "" {
-		l, e := ctx.gow.view.Render(ctx.layout+".layout", data)
-		if e != nil {
-			panic(e)
-		}
-		b = bytes.Replace(l, []byte("{@Content}"), b, -1)
-	}
 	ctx.response.Body = b
-}
-
-// Func adds template function to view.
-// It will affect global *View instance.
-func (ctx *context) Func(name string, fn interface{}) {
-	ctx.gow.view.FuncMap[name] = fn
 }
 
 // Gow returns *Gow instance in this context.
@@ -222,7 +199,7 @@ func (ctx *context) Uri() string {
 	return ctx.request.RequestURI
 }
 
-func (ctx *context) Ext() string{
+func (ctx *context) Ext() string {
 	return path.Ext(ctx.request.URL.Path)
 }
 

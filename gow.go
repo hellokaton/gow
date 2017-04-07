@@ -12,7 +12,6 @@ import (
 
 type Gow struct {
 	Router
-	view         *View
 	DisableHTTP2 bool
 	Dev          bool
 	Server       *http.Server
@@ -22,6 +21,7 @@ type Gow struct {
 	Pool         sync.Pool
 	Host         string
 	Port         int
+	TplEngine       *TemplateEngine
 }
 
 var logger = log.NewLog()
@@ -30,6 +30,7 @@ func Me() *Gow {
 	gow := Gow{}
 	logger.Prefix("[gow] -- ")
 	gow.inter = make(map[string]Handler)
+	gow.TplEngine = NewTemplateEngine()
 	gow.Host = "0.0.0.0"
 	gow.Port = 10077
 	statics = append(statics, "public")
@@ -54,7 +55,7 @@ func (g *Gow) Config() *Gow {
 		}
 		prefix, ok := file.Get("logger", "prefix")
 		if ok {
-			logger.Prefix(prefix)
+			logger.Prefix(prefix + " ")
 		}
 		dev, ok := file.GetBool("app", "dev")
 		if ok {
@@ -74,44 +75,40 @@ func (g *Gow) enableSSL(address string) error {
 }
 
 // StartServer starts a custom http server.
-func (e *Gow) StartServer(s *http.Server) (err error) {
+func (g *Gow) StartServer(s *http.Server) (err error) {
 	// Setup
-	s.Handler = e
+	s.Handler = g
 	
 	if s.TLSConfig == nil {
-		if e.Listener == nil {
-			e.Listener, err = newListener(s.Addr)
+		if g.Listener == nil {
+			g.Listener, err = newListener(s.Addr)
 			if err != nil {
 				return err
 			}
 		}
-		logger.Info("⇛ http server started on %s\n", e.Listener.Addr())
-		return s.Serve(e.Listener)
+		logger.Info("⇛ http server started on %s\n", g.Listener.Addr())
+		return s.Serve(g.Listener)
 	}
-	if e.TLSListener == nil {
+	if g.TLSListener == nil {
 		l, err := newListener(s.Addr)
 		if err != nil {
 			return err
 		}
-		e.TLSListener = tls.NewListener(l, s.TLSConfig)
+		g.TLSListener = tls.NewListener(l, s.TLSConfig)
 	}
-	logger.Info("⇛ http server started on %s\n", e.TLSListener.Addr())
-	return s.Serve(e.TLSListener)
+	logger.Info("⇛ http server started on %s\n", g.TLSListener.Addr())
+	return s.Serve(g.TLSListener)
 }
 
 func (g *Gow) Listen(addr ... string) {
 	if len(addr) > 0 {
 		logger.Info("Server Listen %s", addr)
 		logger.Error("Server Start Error", http.ListenAndServe(addr[0], g))
-	} else{
+	} else {
 		logger.Info("Server Listen %s:%d", g.Host, g.Port)
 		address := g.Host + ":" + fmt.Sprint(g.Port)
 		logger.Error("Server Start Error", http.ListenAndServe(address, g))
 	}
-}
-
-func (g *Gow) View() *View {
-	return g.view
 }
 
 type tcpKeepAliveListener struct {
