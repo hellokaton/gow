@@ -21,23 +21,32 @@ type Gow struct {
 	Pool         sync.Pool
 	Host         string
 	Port         int
-	TplEngine       *TemplateEngine
+	TplEngine    *TemplateEngine
 }
 
 var logger = log.NewLog()
+var _gow = Gow{}
 
 func Me() *Gow {
-	gow := Gow{}
+	_gow.Init()
+	return &_gow
+}
+
+func (g *Gow) Init() {
 	logger.Prefix("[gow] -- ")
-	gow.inter = make(map[string]Handler)
-	gow.TplEngine = NewTemplateEngine()
-	gow.Host = "0.0.0.0"
-	gow.Port = 10077
+	_gow.inter = make(map[string]Handler)
+	_gow.TplEngine = NewTemplateEngine()
+	_gow.Host = "0.0.0.0"
+	_gow.Port = 10077
 	statics = append(statics, "public")
 	statics = append(statics, "static")
-	gow.Config()
-	gow.ApplyStatic()
-	return &gow
+	statics = append(statics, "favicon.ico")
+	_gow.Config()
+	_gow.ApplyStatic()
+}
+
+func (g *Gow) Logger() *log.Logger {
+	return logger
 }
 
 func (g *Gow) Config() *Gow {

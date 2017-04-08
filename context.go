@@ -134,18 +134,20 @@ func (ctx *context) ContentType(contentType string) {
 }
 
 func (ctx *context) Tpl(tpl string, data map[string]interface{}) string {
-	b, e := ctx.gow.TplEngine.Render(tpl+".html", data)
-	if e != nil {
-		panic(e)
-	}
-	return string(b)
+	//b, e := ctx.gow.TplEngine.Render(tpl+".html", data)
+	//if e != nil {
+	//	panic(e)
+	//}
+	//return string(b)
+	return ""
 }
 
 func (ctx *context) Render(tpl string, model map[string]interface{}) {
-	b, e := ctx.gow.TplEngine.Render(tpl+".html", model)
+	b, e := _gow.TplEngine.Render(ctx.response, tpl, model)
 	if e != nil {
 		panic(e)
 	}
+	ctx.ContentType("text/html; charset=utf-8")
 	ctx.response.Body = b
 }
 
