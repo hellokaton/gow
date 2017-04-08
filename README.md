@@ -43,3 +43,4 @@ g.Get("/", func(ctx gow.Context) {
 - 参数优化
 - 多模板支持
 - 配置优化
+- 命令行支持
