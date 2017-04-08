@@ -143,7 +143,7 @@ func (ctx *context) Tpl(tpl string, data map[string]interface{}) string {
 }
 
 func (ctx *context) Render(tpl string, model map[string]interface{}) {
-	b, e := _gow.TplEngine.Render(ctx.response, tpl, model)
+	b, e := _gow.TplEngine.Render(tpl, model)
 	if e != nil {
 		panic(e)
 	}

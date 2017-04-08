@@ -3,10 +3,9 @@ package gow
 import (
 	"html/template"
 	"path/filepath"
-	"github.com/biezhi/gow/bpool"
-	"net/http"
 	"path"
 	"bytes"
+	"github.com/biezhi/agon/utils"
 )
 
 type TemplateEngine struct {
@@ -17,25 +16,58 @@ type TemplateEngine struct {
 	templates       map[string]*template.Template
 }
 
-var bufpool *bpool.BufferPool
+const (
+	COMM_TPL_COMMONS  = "commons"
+	COMM_TPL_INCLUDES = "includes"
+	COMM_TPL_LAYOUTS  = "layouts"
+)
 
-//func (tple *TemplateEngine) CreateTemplate(templateName string, data map[string]interface{}) template.Template {
-//	tpl := template.New(templateName).Funcs(data)
-//	if data != nil {
-//		tpl.Funcs(data)
-//	}
-//
-//	tpl.ParseFiles()
-//}
-
-func (tple *TemplateEngine) Render(w http.ResponseWriter, tplName string, data map[string]interface{}) (b []byte, err error) {
+func (tple *TemplateEngine) CreateTemplate(tplName string) *template.Template {
+	templateName := tplName + tple.templatesSuffix
+	if tple.Cached {
+		if _, ok := tple.templates[templateName]; ok {
+			return tple.templates[templateName]
+		}
+	}
 	
-	tplPath := path.Join(tple.templatesDir, tplName + tple.templatesSuffix)
-	tpl := template.New(tplName +  tple.templatesSuffix)
-	template.Must(tpl.ParseFiles(tplPath))
+	tplPath := path.Join(tple.templatesDir, tplName+tple.templatesSuffix)
+	tpl, err := template.ParseFiles(tplPath)
+	if err != nil {
+		logger.Warn(err.Error())
+	}
+	
+	if utils.PathExist(path.Join(tple.templatesDir, COMM_TPL_INCLUDES)) {
+		if _, err := tpl.ParseGlob(path.Join(tple.templatesDir, COMM_TPL_INCLUDES, "*"+tplName+tple.templatesSuffix)); err != nil {
+			logger.Warn(err.Error())
+		}
+	}
+	
+	if utils.PathExist(path.Join(tple.templatesDir, COMM_TPL_LAYOUTS)) {
+		if _, err := tpl.ParseGlob(path.Join(tple.templatesDir, COMM_TPL_LAYOUTS, "*"+tplName+tple.templatesSuffix)); err != nil {
+			logger.Warn(err.Error())
+		}
+	}
+	
+	if utils.PathExist(path.Join(tple.templatesDir, COMM_TPL_COMMONS)) {
+		if _, err := tpl.ParseGlob(path.Join(tple.templatesDir, COMM_TPL_COMMONS, "*"+tplName+tple.templatesSuffix)); err != nil {
+			logger.Warn(err.Error())
+		}
+	}
+	
+	logger.Debug("Load Template: %s", templateName)
+	if tple.Cached {
+		tple.templates[templateName] = tpl
+	}
+	
+	return tpl
+}
+
+func (tple *TemplateEngine) Render(tplName string, data map[string]interface{}) (b []byte, err error) {
+	tpl := tple.CreateTemplate(tplName)
 	
 	var buf bytes.Buffer
 	e := tpl.Execute(&buf, data)
+	//e := tpl.ExecuteTemplate(&buf, tplName+tple.templatesSuffix, data)
 	if e != nil {
 		return nil, e
 	}
@@ -62,20 +94,36 @@ func (tple *TemplateEngine) Init() {
 		}
 		tple.templatesDir = "templates/"
 		tple.templatesSuffix = ".html"
+		tple.Cached = true
 		
-		layouts, err := filepath.Glob(tple.templatesDir + "layouts/*" + tple.templatesSuffix)
+		layouts, err := filepath.Glob(tple.templatesDir + COMM_TPL_LAYOUTS + "/*" + tple.templatesSuffix)
 		if err != nil {
 			logger.Error(err.Error())
+		} else {
+			for _, layout := range layouts {
+				tple.templates[filepath.Base(layout)] = template.Must(template.ParseFiles(layout))
+				logger.Debug("Load Template Layout: %s, %s", filepath.Base(layout), layout)
+			}
 		}
 		
-		includes, err := filepath.Glob(tple.templatesDir + "includes/*" + tple.templatesSuffix)
+		includes, err := filepath.Glob(tple.templatesDir + COMM_TPL_INCLUDES + "/*" + tple.templatesSuffix)
 		if err != nil {
 			logger.Error(err.Error())
+		} else {
+			for _, include := range includes {
+				tple.templates[filepath.Base(include)] = template.Must(template.ParseFiles(include))
+				logger.Debug("Load Template Include: %s, %s", filepath.Base(include), include)
+			}
 		}
 		
-		for _, layout := range layouts {
-			files := append(includes, layout)
-			tple.templates[filepath.Base(layout)] = template.Must(template.ParseFiles(files...))
+		commons, err := filepath.Glob(tple.templatesDir + COMM_TPL_COMMONS + "/*" + tple.templatesSuffix)
+		if err != nil {
+			logger.Error(err.Error())
+		} else {
+			for _, commons := range commons {
+				tple.templates[filepath.Base(commons)] = template.Must(template.ParseFiles(commons))
+				logger.Debug("Load Template Commons: %s, %s", filepath.Base(commons), commons)
+			}
 		}
 		
 		tple.IsInit = true

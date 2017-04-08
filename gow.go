@@ -33,15 +33,15 @@ func Me() *Gow {
 }
 
 func (g *Gow) Init() {
-	logger.Prefix("[gow] -- ")
-	_gow.inter = make(map[string]Handler)
-	_gow.TplEngine = NewTemplateEngine()
+	logger.Prefix(" -- ")
 	_gow.Host = "0.0.0.0"
 	_gow.Port = 10077
 	statics = append(statics, "public")
 	statics = append(statics, "static")
 	statics = append(statics, "favicon.ico")
+	_gow.inter = make(map[string]Handler)
 	_gow.Config()
+	_gow.TplEngine = NewTemplateEngine()
 	_gow.ApplyStatic()
 }
 
