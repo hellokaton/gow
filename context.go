@@ -34,6 +34,7 @@ type (
 		
 		SetBody(body []byte)
 		Status(code int)
+		Json(data interface{})
 		ContentType(contentType string)
 		Render(tpl string, model map[string]interface{})
 		Tpl(tpl string, data map[string]interface{}) string
@@ -159,6 +160,10 @@ func (ctx *context) Gow() *Gow {
 // Gow returns *Gow instance in this context.
 func (ctx *context) Text(text string) {
 	ctx.response.Text(text)
+}
+
+func (ctx *context) Json(data interface{}) {
+	ctx.response.Json(data)
 }
 
 func (ctx *context) Request() *http.Request {

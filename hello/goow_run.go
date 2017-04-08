@@ -23,6 +23,13 @@ func main() {
 			"Name": "gow",
 		}
 		ctx.Render("hello", fmap)
+	}).Get("/users", func(ctx gow.Context) {
+		fmap := template.FuncMap{
+			"u1": "jack1",
+			"u2": "jack2",
+			"u3": "jack3",
+		}
+		ctx.Json(fmap)
 	}).Before(func(ctx gow.Context) {
 		g.Logger().Debug("global before")
 	}).After(func(ctx gow.Context) {
